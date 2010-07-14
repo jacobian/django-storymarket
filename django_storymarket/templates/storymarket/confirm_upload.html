@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+{% load adminmedia %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/forms.css" />
+  <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/changelists.css" />
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+       <a href="../../">Home</a> &rsaquo;
+       <a href="../">{{ app_label|capfirst }}</a> &rsaquo; 
+       <a href=".">{{ opts.verbose_name_plural|capfirst }}</a> &rsaquo;
+       Upload to Storymarket
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <form action="." method="post">{% csrf_token %}
+      <div>
+        <fieldset id="changelist" class="module aligned">
+          <h2>Upload {{ opts.verbose_name_plural }} to Storymarket:</h2>
+          <table id="result_list">
+            <thead>
+              <tr>
+                <th>Local object</th>
+                <th>Storymarket preview</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for obj in objects %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                  <th>
+                    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.object.pk }}">
+                    {{ opts.verbose_name|capfirst }}: {{ obj.object }}
+                  </th>
+                  <td><pre>{{ obj.preview|pprint }}</pre></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </fieldset>
+      </div>
+      <div class="submit-row">
+        <input type="hidden" name="action" value="upload_to_storymarket" />
+        <input type="hidden" name="post" value="yes" />
+        <input type="submit" value="Upload" class="default" />
+        <p class="deletelink-box"><a href="." class="deletelink">Cancel</a></p>
+      </div>
+    </form>
+  </div>
+{% endblock %}
