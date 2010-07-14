@@ -10,6 +10,7 @@ from django.utils.translation import ugettext_lazy, ugettext as _
 
 import storymarket
 
+from . import converters
 from .models import SyncedObject
 
 def attrs(**kwargs):
@@ -37,6 +38,9 @@ class StorymarketAdmin(admin.ModelAdmin):
         self.list_display = list_display
         
         self.storymarket = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
+        
+        # FIXME: this should be elsewhere.
+        converters.autodiscover()
     
     @attrs(short_description='Upload selected %(verbose_name_plural)s to Storymarket')
     def upload_to_storymarket(self, request, queryset):
@@ -46,7 +50,7 @@ class StorymarketAdmin(admin.ModelAdmin):
             # The user has confirumed the uploading.
             num_uploaded = 0
             for obj in queryset:
-                sm_data = self.to_storymarket(obj)
+                sm_data = converters.convert(self.storymarket, obj)
                 sm_type = sm_data.pop('type')
                 manager = getattr(self.storymarket, sm_type)
                 sm_obj = manager.create(sm_data)
@@ -61,7 +65,7 @@ class StorymarketAdmin(admin.ModelAdmin):
         # Generate a list of converted objects to "preview" as an upload.
         # These is a list-of-dicts for template convienience
         previewed_objects = [
-            {'object': obj, 'preview': self.to_storymarket(obj)}
+            {'object': obj, 'preview': converters.convert(self.storymarket, obj)}
             for obj in queryset
         ]
         
