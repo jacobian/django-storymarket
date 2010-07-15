@@ -1,2 +1,2 @@
-from __future__ import absolute_import
-from .test_models import *
+def test_something():
+    assert 1 == 1

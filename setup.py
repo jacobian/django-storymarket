@@ -26,6 +26,6 @@ setup(
         'Programming Language :: Python',
     ],
     install_requires = ['django >= 1.2', 'python-storymarket'],
-    tests_require = ["mock"],
+    tests_require = ["mock", "nose", "django-nose"],
     test_suite = "django_storymarket.runtests.runtests",
 )
