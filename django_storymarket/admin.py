@@ -4,14 +4,15 @@ from django import template
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import helpers
-from django.contrib.admin.util import model_ngettext
+from django.contrib.admin.util import model_ngettext, unquote
 from django.shortcuts import render_to_response, redirect
 from django.utils.translation import ugettext_lazy, ugettext as _
 
 import storymarket
 
 from . import converters
-from .models import SyncedObject
+from .forms import StorymarketSyncForm
+from .models import SyncedObject, AutoSyncedModel, AutoSyncRule
 
 def attrs(**kwargs):
     """
@@ -23,16 +24,28 @@ def attrs(**kwargs):
         return func
     return _decorator
 
+class AutosyncRuleInline(admin.TabularInline):
+    model = AutoSyncRule
+    extra = 1
+
+class AutoSyncedModelAdmin(admin.ModelAdmin):
+    inlines = [AutosyncRuleInline]
+    
+admin.site.register(AutoSyncedModel, AutoSyncedModelAdmin)
+
 class StorymarketAdmin(admin.ModelAdmin):
     """
     Abstract ModelAdmin base class for content that can be manually synced to
     Storymarket.
     """
     actions = ['upload_to_storymarket']
+    add_form_template = 'storymarket/change_form.html'
+    change_form_template = 'storymarket/change_form.html'
 
     def __init__(self, model, admin_site):
         super(StorymarketAdmin, self).__init__(model, admin_site)
         
+        # FIXME: this should probably be up to the subclass.
         list_display = list(getattr(self, 'list_display', []))
         list_display.append('is_synced_to_storymarket')
         self.list_display = list_display
@@ -50,11 +63,7 @@ class StorymarketAdmin(admin.ModelAdmin):
             # The user has confirumed the uploading.
             num_uploaded = 0
             for obj in queryset:
-                sm_data = converters.convert(self.storymarket, obj)
-                sm_type = sm_data.pop('type')
-                manager = getattr(self.storymarket, sm_type)
-                sm_obj = manager.create(sm_data)
-                SyncedObject.objects.mark_synced(obj, sm_obj)
+                self.save_to_storymarket(obj)
                 num_uploaded += 1
                 
             self.message_user(request, _("Successfully uploaded %(count)d %(items)s to Storymarket.") % {
@@ -86,6 +95,54 @@ class StorymarketAdmin(admin.ModelAdmin):
             
         return render_to_response(template_names, context_instance=context)
         
-    @attrs(short_description='Synced', boolean=True)
+    @attrs(short_description='Synced?', boolean=True)
     def is_synced_to_storymarket(self, obj):
         return SyncedObject.objects.for_model(obj).exists()
+    
+    def change_view(self, request, object_id, extra_context=None):
+        """
+        Extends the base's change view to add the object's 
+        sync status to the context.
+        """
+        obj = self.get_object(request, unquote(object_id))
+
+        # Construct a form to use for upload options, then build a fake admin
+        # fieldset around that form so that we can easily just use the
+        # stock admin fieldset template for rending the storymarket form.
+        form = StorymarketSyncForm(instance=obj, prefix='_storymarket')
+        fieldset = helpers.Fieldset(form, name='Storymarket options', 
+                                          fields=form.fields.keys(),
+                                          classes=['collapse'])
+        
+        ctx = extra_context or {}
+        ctx['storymarket_fieldset'] = fieldset
+        return super(StorymarketAdmin, self).change_view(request, object_id, ctx)
+    
+    def save_model(self, request, obj, form, change):
+        """
+        Upload the object to Storymarket after saving it to the DB.
+        """
+        super(StorymarketAdmin, self).save_model(request, obj, form, change)
+        
+        # We need to pull the storymarket info out of request.POST directly
+        # since it'll have been stripped from form.cleaned_data as part of
+        # validation
+        if request.POST.get('_storymarket_upload'):
+            self.save_to_storymarket(obj)
+            self.message_user(request, _("Successfully uploaded 1 %(items)s to Storymarket.") % {
+                "count": 1, "items": model_ngettext(modeladmin.opts, n)
+            })            
+        
+    def save_to_storymarket(self, obj):
+        """
+        Push an object o Storymarket.
+        
+        Called from the various parts of the admin that need to upload
+        objects -- ``save_model``, the ``upload_to_storymarket`` action,
+        etc.
+        """
+        sm_data = converters.convert(self.storymarket, obj)
+        sm_type = sm_data.pop('type')
+        manager = getattr(self.storymarket, sm_type)
+        sm_obj = manager.create(sm_data)
+        SyncedObject.objects.mark_synced(obj, sm_obj)

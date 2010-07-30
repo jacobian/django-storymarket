@@ -31,6 +31,7 @@ either be the binary data as a string or (more likely) a file-like object::
         }
 """
 
+from django.db import models
 from django.conf import settings
 from django.utils.importlib import import_module
 from django.utils.module_loading import module_has_submodule
@@ -49,17 +50,25 @@ def convert(api, instance):
     :param instance: The model instance to convert.
     :rtype: dict
     """
-    registry_key = str(instance._meta)
+    autodiscover()
     
     # I'm using look-before-you-leap instead of better-to-ask-for-permission
     # here because a try/except might accidentally catch a KeyError raised
     # by the converter itself.
+    registry_key = str(instance._meta)
     if registry_key in _registry:
         return _registry[registry_key](api, instance)
     elif _FALLBACK_KEY in _registry:
         return _registry[_FALLBACK_KEY](api, instance)
     else:
         raise CannotConvert("Can't convert %s objects." % instance._meta)
+
+def registered_models():
+    """
+    Return a list of all models registered for conversion.
+    """
+    autodiscover()
+    return filter(None, (models.get_model(*k.split('.')) for k in _registry.keys()))
 
 class CannotConvert(Exception):
     pass
