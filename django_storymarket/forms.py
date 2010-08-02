@@ -17,9 +17,12 @@ class StorymarketAPIChoiceField(forms.ChoiceField):
     """
     
     def __init__(self, *args, **kwargs):
-        super(StorymarketAPIChoiceField, self).__init__(choices=self._get_choices(), *args, **kwargs)
+        # Skip ChoiceField's initializer since we're handling choices
+        # via the property below.
+        super(forms.ChoiceField, self).__init__(*args, **kwargs)
     
-    def _get_choices(self):
+    @property
+    def choices(self):
         # Return a list of choices sorted by name, along with an empty choice.
         cache_key = 'storymarket_choice_cache:%s' % self.__class__.__name__
         choices = cache.get(cache_key)
