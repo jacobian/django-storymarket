@@ -39,25 +39,24 @@ class StorymarketAPIChoiceField(forms.ChoiceField):
             cache.set(cache_key, choices, CHOICE_CACHE_TIMEOUT)
         return choices
 
+    def _api(self):
+        return storymarket.Storymarket(settings.STORYMARKET_API_KEY)
+
 class OrgChoiceField(StorymarketAPIChoiceField):
     def _call_api(self):
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        return api.orgs.all()
+        return self._api().orgs.all()
     
 class CategoryChoiceField(StorymarketAPIChoiceField):
     def _call_api(self):
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        return api.subcategories.all()
+        return self._api().subcategories.all()
 
 class PricingChoiceField(StorymarketAPIChoiceField):
     def _call_api(self):
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        return api.pricing.all()        
+        return self._api().pricing.all()        
 
 class RightsChoiceField(StorymarketAPIChoiceField):
     def _call_api(self):
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        return api.rights.all()        
+        return self._api().rights.all()        
 
 class StorymarketSyncForm(forms.Form):
     """
@@ -70,7 +69,6 @@ class StorymarketSyncForm(forms.Form):
     tags = forms.CharField()
     
     def __init__(self, *args, **kwargs):
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
         if 'type' in kwargs:
             self.storymarket_type = kwargs.pop('type')
         else:
@@ -91,7 +89,7 @@ class StorymarketSyncForm(forms.Form):
                     'category': sync_info.category_id,
                     'pricing': sync_info.pricing_id,
                     'rights': sync_info.rights_id,
-                    'tags': sync_info_tags,
+                    'tags': sync_info.tags,
                 })
         
         super(StorymarketSyncForm, self).__init__(initial=initial, *args, **kwargs)
