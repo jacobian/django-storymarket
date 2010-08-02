@@ -26,7 +26,7 @@
             <thead>
               <tr>
                 <th>Local object</th>
-                <th>Storymarket preview</th>
+                <th>Storymarket options</th>
               </tr>
             </thead>
             <tbody>
@@ -36,7 +36,7 @@
                     <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.object.pk }}">
                     {{ opts.verbose_name|capfirst }}: {{ obj.object }}
                   </th>
-                  <td><pre>{{ obj.preview|pprint }}</pre></td>
+                  <td>{{ obj.form.as_p }}</td>
                 </tr>
               {% endfor %}
             </tbody>

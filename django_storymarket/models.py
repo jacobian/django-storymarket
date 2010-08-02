@@ -28,7 +28,8 @@ class SyncedObject(models.Model):
     storymarket_type = models.CharField(max_length=50, choices=STORYMARKET_TYPE_CHOICES)
     storymarket_id   = models.PositiveIntegerField()
     
-    # For ease of local reference, the IDs of the related org/category/etc.
+    # For ease of local reference, the related org/category/etc.
+    tags        = models.CharField(max_length=500)
     org_id      = models.PositiveIntegerField()
     category_id = models.PositiveIntegerField()
     pricing_id  = models.PositiveIntegerField(blank=True, null=True)

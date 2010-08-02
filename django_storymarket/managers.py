@@ -34,6 +34,7 @@ class SyncedObjectManager(models.Manager):
         defaults = dict(
             storymarket_type = storymarket_obj.__class__.__name__.lower(),
             storymarket_id = storymarket_obj.id,
+            tags = storymarket_obj.tags,
             org_id = storymarket_obj.org.id,
             category_id = storymarket_obj.category.id,
             pricing_id = (storymarket_obj.pricing_scheme.id

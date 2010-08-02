@@ -11,7 +11,6 @@ def story_to_storymarket(api, obj):
         "org": api.orgs.get(12),
         "category": api.subcategories.get(12),
         "content": obj.body,
-        "tags": ["testing"],
     }
 
 django_storymarket.converters.register(ExampleStory, story_to_storymarket)

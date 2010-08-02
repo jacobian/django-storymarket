@@ -60,15 +60,20 @@ class StorymarketSyncForm(forms.Form):
     """
     A form allowing the choice of sync options for a given model instance.
     """
-    sync = forms.BooleanField(label='Upload to Storymarket', required=False)
     org = OrgChoiceField()
     category = CategoryChoiceField()
     pricing = PricingChoiceField()
     rights = RightsChoiceField()
+    tags = forms.CharField()
     
-    def __init__(self, instance=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
+        if 'type' in kwargs:
+            self.storymarket_type = kwargs.pop('type')
+        else:
+            raise TypeError("__init__() missing required keyword argument 'type'")
         initial = kwargs.pop('initial', {})
+        instance = kwargs.pop('instance', None)
 
         # If we've been given an object instance then look up initial data
         # from Storymarket. 
@@ -76,16 +81,14 @@ class StorymarketSyncForm(forms.Form):
             try:
                 sync_info = SyncedObject.objects.for_model(instance).get()
             except SyncedObject.DoesNotExist:
-                initial['sync'] = False
+                pass
             else:
-                manager = getattr(api, sync_info.storymarket_type)
-                remote_obj = manager.get(id=sync_info.storymarket_id)
                 initial.update({
-                    'sync': True,
-                    'org': remote_obj.org.id,
-                    'category': remote_obj.category.id,
-                    'pricing': remote_obj.pricing.id,
-                    'rights': remote_obj.rights.id,
+                    'org': sync_info.org_id,
+                    'category': sync_info.category_id,
+                    'pricing': sync_info.pricing_id,
+                    'rights': sync_info.rights_id,
+                    'tags': sync_info_tags,
                 })
         
         super(StorymarketSyncForm, self).__init__(initial=initial, *args, **kwargs)

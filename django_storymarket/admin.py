@@ -23,15 +23,6 @@ def attrs(**kwargs):
             setattr(func, k, v)
         return func
     return _decorator
-
-class AutosyncRuleInline(admin.TabularInline):
-    model = AutoSyncRule
-    extra = 1
-
-class AutoSyncedModelAdmin(admin.ModelAdmin):
-    inlines = [AutosyncRuleInline]
-    
-admin.site.register(AutoSyncedModel, AutoSyncedModelAdmin)
     
 @attrs(short_description='Upload selected %(verbose_name_plural)s to Storymarket')
 def upload_to_storymarket(modeladmin, request, queryset):
@@ -39,12 +30,27 @@ def upload_to_storymarket(modeladmin, request, queryset):
     Admin action to upload selected objects to storymarket.
     """
     opts = modeladmin.model._meta
-            
-    if request.POST.get('post'):
-        # The user has confirumed the uploading.
+    post_data = request.POST if request.POST.get('post') else None
+    
+    # Generate a list of converted objects and forms for chosing options.
+    forms = {}
+    object_forms = []
+    for obj in queryset:
+        initial = converters.convert(obj)
+        storymarket_type = initial.pop('type')
+        form = StorymarketSyncForm(post_data, 
+                                   prefix = 'sm-%s' % obj.pk,
+                                   initial = initial,
+                                   type = storymarket_type,)
+        object_forms.append({'object': obj, 'form': form})
+        forms[obj.pk] = form
+    
+    if request.POST.get('post') and all(f.is_valid() for f in forms.values()):
+        # The user has confirmed the uploading and has selected valid info.
         num_uploaded = 0
         for obj in queryset:
-            _save_to_storymarket(obj)
+            form = forms[obj.pk]
+            _save_to_storymarket(obj, form.storymarket_type, form.cleaned_data)
             num_uploaded += 1
             
         modeladmin.message_user(request, 
@@ -53,19 +59,12 @@ def upload_to_storymarket(modeladmin, request, queryset):
         })
         return redirect('.')
     
-    # Generate a list of converted objects to "preview" as an upload.
-    # These is a list-of-dicts for template convienience
-    previewed_objects = [
-        {'object': obj, 'preview': converters.convert(obj)}
-        for obj in queryset
-    ]
-    
     context = template.RequestContext(request, {
         "app_label": opts.app_label,
         'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
         "opts": opts,
         "root_path": modeladmin.admin_site.root_path,
-        "objects": previewed_objects,
+        "objects": object_forms,
     })
     
     template_names = [
@@ -84,7 +83,7 @@ def is_synced_to_storymarket(obj):
     """
     return SyncedObject.objects.for_model(obj).exists()
     
-def _save_to_storymarket(obj):
+def _save_to_storymarket(obj, storymarket_type, data):
     """
     Helper: push an object o Storymarket.
     
@@ -93,8 +92,15 @@ def _save_to_storymarket(obj):
     etc.
     """
     api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-    sm_data = converters.convert(obj)
-    sm_type = sm_data.pop('type')
-    manager = getattr(api, sm_type)
-    sm_obj = manager.create(sm_data)
+    manager = getattr(api, storymarket_type)
+    sm_obj = manager.create(data)
     SyncedObject.objects.mark_synced(obj, sm_obj)
+    
+class AutosyncRuleInline(admin.TabularInline):
+    model = AutoSyncRule
+    extra = 1
+
+class AutoSyncedModelAdmin(admin.ModelAdmin):
+    inlines = [AutosyncRuleInline]
+    
+admin.site.register(AutoSyncedModel, AutoSyncedModelAdmin)
