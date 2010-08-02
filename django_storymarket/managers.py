@@ -36,8 +36,10 @@ class SyncedObjectManager(models.Manager):
             storymarket_id = storymarket_obj.id,
             org_id = storymarket_obj.org.id,
             category_id = storymarket_obj.category.id,
-            pricing_id = storymarket_obj.pricing.id,
-            rights_id = storymarket_obj.rights.id,
+            pricing_id = (storymarket_obj.pricing_scheme.id
+                          if storymarket_obj.pricing_scheme else None),
+            rights_id = (storymarket_obj.rights_scheme.id
+                         if storymarket_obj.rights_scheme else None),
             last_updated = datetime.datetime.now(),
         )
         so, created = self.get_or_create(

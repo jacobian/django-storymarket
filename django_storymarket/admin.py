@@ -1,14 +1,14 @@
 from __future__ import absolute_import
 
+import storymarket
+
 from django import template
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import helpers
-from django.contrib.admin.util import model_ngettext, unquote
+from django.contrib.admin.util import model_ngettext
 from django.shortcuts import render_to_response, redirect
-from django.utils.translation import ugettext_lazy, ugettext as _
-
-import storymarket
+from django.utils.translation import ugettext as _
 
 from . import converters
 from .forms import StorymarketSyncForm
@@ -32,117 +32,69 @@ class AutoSyncedModelAdmin(admin.ModelAdmin):
     inlines = [AutosyncRuleInline]
     
 admin.site.register(AutoSyncedModel, AutoSyncedModelAdmin)
-
-class StorymarketAdmin(admin.ModelAdmin):
-    """
-    Abstract ModelAdmin base class for content that can be manually synced to
-    Storymarket.
-    """
-    actions = ['upload_to_storymarket']
-    add_form_template = 'storymarket/change_form.html'
-    change_form_template = 'storymarket/change_form.html'
-
-    def __init__(self, model, admin_site):
-        super(StorymarketAdmin, self).__init__(model, admin_site)
-        
-        # FIXME: this should probably be up to the subclass.
-        list_display = list(getattr(self, 'list_display', []))
-        list_display.append('is_synced_to_storymarket')
-        self.list_display = list_display
-        
-        self.storymarket = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        
-        # FIXME: this should be elsewhere.
-        converters.autodiscover()
     
-    @attrs(short_description='Upload selected %(verbose_name_plural)s to Storymarket')
-    def upload_to_storymarket(self, request, queryset):
-        opts = self.model._meta
-                
-        if request.POST.get('post'):
-            # The user has confirumed the uploading.
-            num_uploaded = 0
-            for obj in queryset:
-                self.save_to_storymarket(obj)
-                num_uploaded += 1
-                
-            self.message_user(request, _("Successfully uploaded %(count)d %(items)s to Storymarket.") % {
-                "count": n, "items": model_ngettext(modeladmin.opts, n)
-            })
-            return redirect('.')
-        
-        # Generate a list of converted objects to "preview" as an upload.
-        # These is a list-of-dicts for template convienience
-        previewed_objects = [
-            {'object': obj, 'preview': converters.convert(self.storymarket, obj)}
-            for obj in queryset
-        ]
-        
-        context = template.RequestContext(request, {
-            "app_label": opts.app_label,
-            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
-            "opts": opts,
-            "root_path": self.admin_site.root_path,
-            "objects": previewed_objects,
-        })
-        
-        template_names = [
-            "storymarket/confirm_%s_%s_upload.html" % (opts.app_label, opts.object_name.lower()),
-            "storymarket/confirm_upload.html"
-        ]
-        if hasattr(self, "storymarket_upload_confirmation_template"):
-            template_names.insert(0, self.storymarket_upload_confirmation_template)
+@attrs(short_description='Upload selected %(verbose_name_plural)s to Storymarket')
+def upload_to_storymarket(modeladmin, request, queryset):
+    """
+    Admin action to upload selected objects to storymarket.
+    """
+    opts = modeladmin.model._meta
             
-        return render_to_response(template_names, context_instance=context)
-        
-    @attrs(short_description='Synced?', boolean=True)
-    def is_synced_to_storymarket(self, obj):
-        return SyncedObject.objects.for_model(obj).exists()
+    if request.POST.get('post'):
+        # The user has confirumed the uploading.
+        num_uploaded = 0
+        for obj in queryset:
+            _save_to_storymarket(obj)
+            num_uploaded += 1
+            
+        modeladmin.message_user(request, 
+            _("Successfully uploaded %(count)d %(items)s to Storymarket.") % {
+                "count": num_uploaded, "items": model_ngettext(modeladmin.opts, num_uploaded)
+        })
+        return redirect('.')
     
-    def change_view(self, request, object_id, extra_context=None):
-        """
-        Extends the base's change view to add the object's 
-        sync status to the context.
-        """
-        obj = self.get_object(request, unquote(object_id))
-
-        # Construct a form to use for upload options, then build a fake admin
-        # fieldset around that form so that we can easily just use the
-        # stock admin fieldset template for rending the storymarket form.
-        form = StorymarketSyncForm(instance=obj, prefix='_storymarket')
-        fieldset = helpers.Fieldset(form, name='Storymarket options', 
-                                          fields=form.fields.keys(),
-                                          classes=['collapse'])
-        
-        ctx = extra_context or {}
-        ctx['storymarket_fieldset'] = fieldset
-        return super(StorymarketAdmin, self).change_view(request, object_id, ctx)
+    # Generate a list of converted objects to "preview" as an upload.
+    # These is a list-of-dicts for template convienience
+    previewed_objects = [
+        {'object': obj, 'preview': converters.convert(obj)}
+        for obj in queryset
+    ]
     
-    def save_model(self, request, obj, form, change):
-        """
-        Upload the object to Storymarket after saving it to the DB.
-        """
-        super(StorymarketAdmin, self).save_model(request, obj, form, change)
+    context = template.RequestContext(request, {
+        "app_label": opts.app_label,
+        'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+        "opts": opts,
+        "root_path": modeladmin.admin_site.root_path,
+        "objects": previewed_objects,
+    })
+    
+    template_names = [
+        "storymarket/confirm_%s_%s_upload.html" % (opts.app_label, opts.object_name.lower()),
+        "storymarket/confirm_upload.html"
+    ]
+    if hasattr(modeladmin, "storymarket_upload_confirmation_template"):
+        template_names.insert(0, modeladmin.storymarket_upload_confirmation_template)
         
-        # We need to pull the storymarket info out of request.POST directly
-        # since it'll have been stripped from form.cleaned_data as part of
-        # validation
-        if request.POST.get('_storymarket_upload'):
-            self.save_to_storymarket(obj)
-            self.message_user(request, _("Successfully uploaded 1 %(items)s to Storymarket.") % {
-                "count": 1, "items": model_ngettext(modeladmin.opts, n)
-            })            
+    return render_to_response(template_names, context_instance=context)
         
-    def save_to_storymarket(self, obj):
-        """
-        Push an object o Storymarket.
-        
-        Called from the various parts of the admin that need to upload
-        objects -- ``save_model``, the ``upload_to_storymarket`` action,
-        etc.
-        """
-        sm_data = converters.convert(self.storymarket, obj)
-        sm_type = sm_data.pop('type')
-        manager = getattr(self.storymarket, sm_type)
-        sm_obj = manager.create(sm_data)
-        SyncedObject.objects.mark_synced(obj, sm_obj)
+@attrs(short_description='Synced?', boolean=True)
+def is_synced_to_storymarket(obj):
+    """
+    Admin field callback to display storymarket sync status.
+    """
+    return SyncedObject.objects.for_model(obj).exists()
+    
+def _save_to_storymarket(obj):
+    """
+    Helper: push an object o Storymarket.
+    
+    Called from the various parts of the admin that need to upload
+    objects -- ``save_model``, the ``upload_to_storymarket`` action,
+    etc.
+    """
+    api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
+    sm_data = converters.convert(obj)
+    sm_type = sm_data.pop('type')
+    manager = getattr(api, sm_type)
+    sm_obj = manager.create(sm_data)
+    SyncedObject.objects.mark_synced(obj, sm_obj)

@@ -31,8 +31,8 @@ class SyncedObject(models.Model):
     # For ease of local reference, the IDs of the related org/category/etc.
     org_id      = models.PositiveIntegerField()
     category_id = models.PositiveIntegerField()
-    pricing_id  = models.PositiveIntegerField()
-    rights_id   = models.PositiveIntegerField()
+    pricing_id  = models.PositiveIntegerField(blank=True, null=True)
+    rights_id   = models.PositiveIntegerField(blank=True, null=True)
     
     # When we last did a sync.
     last_updated = models.DateTimeField(default=datetime.datetime.now)

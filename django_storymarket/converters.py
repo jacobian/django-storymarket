@@ -31,6 +31,7 @@ either be the binary data as a string or (more likely) a file-like object::
         }
 """
 
+import storymarket
 from django.db import models
 from django.conf import settings
 from django.utils.importlib import import_module
@@ -40,17 +41,17 @@ _registry = {}
 _FALLBACK_KEY = '*'
 _CONVERTER_MODULE_NAME = 'storymarket_converters'
 
-def convert(api, instance):
+def convert(instance):
     """
     Convert a model instance using its registered converter.
     
     If it fails, this'll raise :exc:`CannotConvert`.
     
-    :param api: The storymarket API instance.
     :param instance: The model instance to convert.
     :rtype: dict
     """
     autodiscover()
+    api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
     
     # I'm using look-before-you-leap instead of better-to-ask-for-permission
     # here because a try/except might accidentally catch a KeyError raised
