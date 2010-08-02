@@ -12,7 +12,7 @@ from django.shortcuts import render_to_response, redirect
 from django.utils.translation import ugettext as _
 
 from . import converters
-from .forms import StorymarketSyncForm
+from .forms import StorymarketSyncForm, StorymarketOptionalSyncForm
 from .models import SyncedObject, AutoSyncedModel, AutoSyncRule
 
 # TODO: reorganize this module into public/private stuff
@@ -105,7 +105,6 @@ def _save_to_storymarket(obj, storymarket_type, data):
 
 class StorymarketUploaderInlineFormset(generic.BaseGenericInlineFormSet):
     def save(self):
-        # TODO: only save if some "upload to storymarket" checkbox is checked
         # TODO: only do an update if the object already exists on SM
         
         self.changed_objects = []
@@ -115,17 +114,17 @@ class StorymarketUploaderInlineFormset(generic.BaseGenericInlineFormSet):
         assert len(self.forms) == 1
         
         form = self.forms[0]
-        sm_data = converters.convert(self.instance)
-        sm_type = sm_data.pop('type')
-        sm_data.update(form.cleaned_data)
-        so, created = _save_to_storymarket(self.instance, sm_type, sm_data)
-
-        if created:
-            self.new_objects.append(so)
-        else:
-            self.changed_objects.append(so)
+        if form.cleaned_data.pop('sync', False):
+            sm_data = converters.convert(self.instance)
+            sm_type = sm_data.pop('type')
+            sm_data.update(form.cleaned_data)
+            so, created = _save_to_storymarket(self.instance, sm_type, sm_data)
+            if created:
+                self.new_objects.append(so)
+            else:
+                self.changed_objects.append(so)
             
-        return [so]
+        return self.new_objects + self.changed_objects
 
 class StorymarketUploaderInline(generic.GenericStackedInline):
     model = SyncedObject
@@ -133,8 +132,10 @@ class StorymarketUploaderInline(generic.GenericStackedInline):
     ct_fk_field = "object_pk"
     max_num = 1
     can_delete = False
-    form = StorymarketSyncForm
+    form = StorymarketOptionalSyncForm
     formset = StorymarketUploaderInlineFormset
+    fields = ['sync', 'org', 'category', 'tags']
+    template = 'storymarket/uploader_inline.html'
 
 class AutosyncRuleInline(admin.TabularInline):
     model = AutoSyncRule

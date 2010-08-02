@@ -15,10 +15,10 @@ class StorymarketSyncForm(forms.ModelForm):
     class Meta:
         model = SyncedObject
         fields = ['org', 'category', 'tags']
-    
+        
     def __init__(self, *args, **kwargs):
         super(StorymarketSyncForm, self).__init__(*args, **kwargs)
-
+        
         # Override some fields. Tags is left alone; the default is fine.
         self.fields['org']      = forms.TypedChoiceField(label='Org', 
                                                          choices=self._choices('orgs'),
@@ -26,8 +26,6 @@ class StorymarketSyncForm(forms.ModelForm):
         self.fields['category'] = forms.TypedChoiceField(label='Category',
                                                          choices=self._choices('subcategories'),
                                                          coerce=int)
-        # self.fields['pricing']  = forms.ChoiceField(label='Pricing', choices=self._choices('pricing'))
-        # self.fields['rights']   = forms.ChoiceField(label='Rights', choices=self._choices('rights'))
     
     def _choices(self, manager_name):
         """
@@ -55,3 +53,27 @@ class StorymarketSyncForm(forms.ModelForm):
     @property
     def _api(self):
         return storymarket.Storymarket(settings.STORYMARKET_API_KEY)
+        
+class StorymarketOptionalSyncForm(StorymarketSyncForm):
+    """
+    Like a StorymarketSyncForm, but with an extra boolean field indicating
+    whether syncing should take place or not.
+    """
+    sync = forms.BooleanField(initial=False, required=False,
+                              label="Upload to Storymarket")
+                              
+    def __init__(self, *args, **kwargs):
+        super(StorymarketOptionalSyncForm, self).__init__(*args, **kwargs)
+        
+        # Make fields optional; we'll validate them in clean()
+        for field in ('org', 'category', 'tags'):
+            self.fields[field].required = False
+        
+    def clean(self):
+        if self.cleaned_data['sync']:
+            for field in ('org', 'category', 'tags'):
+                if not self.cleaned_data.get(field, None):
+                    message = self.fields[field].error_messages['required']
+                    self._errors[field] = self.error_class([message])
+                    del self.cleaned_data[field]
+        return self.cleaned_data
