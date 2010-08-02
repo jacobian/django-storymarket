@@ -29,11 +29,11 @@ class SyncedObject(models.Model):
     storymarket_id   = models.PositiveIntegerField()
     
     # For ease of local reference, the related org/category/etc.
-    tags        = models.CharField(max_length=500)
-    org_id      = models.PositiveIntegerField()
-    category_id = models.PositiveIntegerField()
-    pricing_id  = models.PositiveIntegerField(blank=True, null=True)
-    rights_id   = models.PositiveIntegerField(blank=True, null=True)
+    tags     = models.CharField(max_length=500)
+    org      = models.PositiveIntegerField()
+    category = models.PositiveIntegerField()
+    pricing  = models.PositiveIntegerField(blank=True, null=True)
+    rights   = models.PositiveIntegerField(blank=True, null=True)
     
     # When we last did a sync.
     last_updated = models.DateTimeField(default=datetime.datetime.now)
@@ -42,24 +42,6 @@ class SyncedObject(models.Model):
     
     def __unicode__(self):
         return "%s synced as %s ID=%s" % (self.object, self.storymarket_type, self.storymarket_id)
-    
-    def _storymarket_property(id_attr, manager_name):
-        """
-        Helper to construct related Storymarket object properties.
-        """
-        api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-        manager = getattr(api, manager_name)
-        def _getter(self):
-            return manager.get(id=getattr(self, id_attr))
-        def _setter(self, val):
-            setattr(self, id_attr, val.id)
-        return property(_getter, _setter)
-        
-    # Properties for accessing the property storymarket objects
-    org      = _storymarket_property('org_id', 'orgs')
-    category = _storymarket_property('category_id', 'subcategories')
-    pricing  = _storymarket_property('pricing_id', 'pricing')
-    rights   = _storymarket_property('rights_id', 'rights')
     
 class AutoSyncedModel(models.Model):
     """
@@ -181,7 +163,7 @@ class AutoSyncRule(models.Model):
         
         # Try to check for a match.
         try:
-            match = op_func(field_val, value)
+            match = op_func(field_val, self.value)
         except (ValueError, TypeError):
             return None
         

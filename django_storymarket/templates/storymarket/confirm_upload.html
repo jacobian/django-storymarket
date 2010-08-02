@@ -30,10 +30,10 @@
               </tr>
             </thead>
             <tbody>
-              {% for obj in objects %}
+              {% for obj_pk, obj in objects.items %}
                 <tr class="{% cycle 'row1' 'row2' %}">
                   <th>
-                    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.object.pk }}">
+                    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj_pk }}">
                     {{ opts.verbose_name|capfirst }}: {{ obj.object }}
                   </th>
                   <td>{{ obj.form.as_p }}</td>

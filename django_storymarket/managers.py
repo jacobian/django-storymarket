@@ -33,15 +33,13 @@ class SyncedObjectManager(models.Manager):
         """
         defaults = dict(
             storymarket_type = storymarket_obj.__class__.__name__.lower(),
-            storymarket_id = storymarket_obj.id,
-            tags = storymarket_obj.tags,
-            org_id = storymarket_obj.org.id,
-            category_id = storymarket_obj.category.id,
-            pricing_id = (storymarket_obj.pricing_scheme.id
-                          if storymarket_obj.pricing_scheme else None),
-            rights_id = (storymarket_obj.rights_scheme.id
-                         if storymarket_obj.rights_scheme else None),
-            last_updated = datetime.datetime.now(),
+            storymarket_id   = storymarket_obj.id,
+            tags             = storymarket_obj.tags,
+            org              = storymarket_obj.org.id,
+            category         = storymarket_obj.category.id,
+            pricing          = (storymarket_obj.pricing_scheme.id if storymarket_obj.pricing_scheme else None),
+            rights           = (storymarket_obj.rights_scheme.id if storymarket_obj.rights_scheme else None),
+            last_updated     = datetime.datetime.now(),
         )
         so, created = self.get_or_create(
             content_type = ContentType.objects.get_for_model(django_obj),

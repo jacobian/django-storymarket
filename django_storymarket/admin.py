@@ -7,12 +7,15 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import helpers
 from django.contrib.admin.util import model_ngettext
+from django.contrib.contenttypes import generic
 from django.shortcuts import render_to_response, redirect
 from django.utils.translation import ugettext as _
 
 from . import converters
 from .forms import StorymarketSyncForm
 from .models import SyncedObject, AutoSyncedModel, AutoSyncRule
+
+# TODO: reorganize this module into public/private stuff
 
 def attrs(**kwargs):
     """
@@ -32,25 +35,26 @@ def upload_to_storymarket(modeladmin, request, queryset):
     opts = modeladmin.model._meta
     post_data = request.POST if request.POST.get('post') else None
     
-    # Generate a list of converted objects and forms for chosing options.
-    forms = {}
-    object_forms = []
+    # Gather forms, converted data, and other options for later.
+    object_info = {}
     for obj in queryset:
-        initial = converters.convert(obj)
-        storymarket_type = initial.pop('type')
-        form = StorymarketSyncForm(post_data, 
-                                   prefix = 'sm-%s' % obj.pk,
-                                   initial = initial,
-                                   type = storymarket_type,)
-        object_forms.append({'object': obj, 'form': form})
-        forms[obj.pk] = form
+        converted_data = converters.convert(obj)
+        storymarket_type = converted_data.pop('type')
+        form = StorymarketSyncForm(post_data, prefix='sm-%s' % obj.pk, initial=converted_data.copy())
+        object_info[obj.pk] = {
+            'object': obj,
+            'form': form,
+            'storymarket_type': storymarket_type,
+            'converted_data': converted_data}
     
-    if request.POST.get('post') and all(f.is_valid() for f in forms.values()):
+    if request.POST.get('post') and all(i['form'].is_valid() for i in object_info.values()):
         # The user has confirmed the uploading and has selected valid info.
         num_uploaded = 0
         for obj in queryset:
-            form = forms[obj.pk]
-            _save_to_storymarket(obj, form.storymarket_type, form.cleaned_data)
+            info = object_info[obj.pk]
+            data = info['converted_data']
+            data.update(info['form'].cleaned_data)
+            _save_to_storymarket(obj, info['storymarket_type'], data)
             num_uploaded += 1
             
         modeladmin.message_user(request, 
@@ -64,7 +68,7 @@ def upload_to_storymarket(modeladmin, request, queryset):
         'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
         "opts": opts,
         "root_path": modeladmin.admin_site.root_path,
-        "objects": object_forms,
+        "objects": object_info,
     })
     
     template_names = [
@@ -91,11 +95,47 @@ def _save_to_storymarket(obj, storymarket_type, data):
     objects -- ``save_model``, the ``upload_to_storymarket`` action,
     etc.
     """
+    # TODO: should figure out how to do an update if the object already exists.
     api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
     manager = getattr(api, storymarket_type)
     sm_obj = manager.create(data)
-    SyncedObject.objects.mark_synced(obj, sm_obj)
-    
+    return SyncedObject.objects.mark_synced(obj, sm_obj)
+
+# TODO: figure out how (if at all) to get converted data into form.intial
+
+class StorymarketUploaderInlineFormset(generic.BaseGenericInlineFormSet):
+    def save(self):
+        # TODO: only save if some "upload to storymarket" checkbox is checked
+        # TODO: only do an update if the object already exists on SM
+        
+        self.changed_objects = []
+        self.deleted_objects = []
+        self.new_objects = []
+
+        assert len(self.forms) == 1
+        
+        form = self.forms[0]
+        sm_data = converters.convert(self.instance)
+        sm_type = sm_data.pop('type')
+        sm_data.update(form.cleaned_data)
+        so, created = _save_to_storymarket(self.instance, sm_type, sm_data)
+
+        if created:
+            self.new_objects.append(so)
+        else:
+            self.changed_objects.append(so)
+            
+        return [so]
+
+class StorymarketUploaderInline(generic.GenericStackedInline):
+    model = SyncedObject
+    ct_field = "content_type"
+    ct_fk_field = "object_pk"
+    max_num = 1
+    can_delete = False
+    form = StorymarketSyncForm
+    formset = StorymarketUploaderInlineFormset
+
 class AutosyncRuleInline(admin.TabularInline):
     model = AutoSyncRule
     extra = 1
