@@ -14,7 +14,7 @@ setup(
     license = 'BSD',
     author = 'Jacob Kaplan-Moss',
     author_email = 'jacob@jacobian.org',
-    packages = find_packages(exclude=['tests']),
+    packages = find_packages(exclude=['tests', 'example']),
     classifiers = [
         'Development Status :: 4 - Beta',
         'Environment :: Console',
