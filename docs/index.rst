@@ -50,8 +50,9 @@ defined and registered. Here's an example::
     
 Of note here:
     
-    * The conversion function takes an instance the ``python-storymarket``
-:class:`Storymarket` API object and the Django model to convert. 
+    * The conversion function takes an instance of the
+      :class:`~storymarket.Storymarket` API object and the Django model to
+      convert.
 
     * It must return a dictionary of converted data. This dictionary should
       be in the form described `in the python-storymarket documentation`__
@@ -68,7 +69,7 @@ Of note here:
 __ http://packages.python.org/python-storymarket/content.html#uploading-new-objects
 
 You may define these functions and register them anywhere. However, if you
-place a ``storymarket_convertors.py`` in any app directory it'll be loaded
+place a ``storymarket_converters.py`` in any app directory it'll be loaded
 automatically and can be used as a convenient place to register converters.
 
 Finally, you need to hook the upload functions into the admin interface.
@@ -90,6 +91,8 @@ uploads from object detail pages. Wire 'em into the admin like so::
     admin.site.register(ExampleStory, ExampleStoryAdmin)
     
 Of course, each of these bits is optional; you can mix and match.
+
+More detailed documentation doesn't yet exist, sadly.
 
 Contributing
 ------------
