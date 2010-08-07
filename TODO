@@ -1,0 +1,5 @@
+* Handling of binary files.
+* Tests.
+* Finish docs.
+* Figure out where to hook in automatic uploads.
+* s/convertors/converters/

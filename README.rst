@@ -1,8 +1,8 @@
 Django bindings to the Storymarket API
 ======================================
 
-This library allows manual or automatic uploaded of Django objects to 
-`Stortmarket <http://storymarket.com/>`_.
+This library binds Django models to the `Storymarket API
+<http://storymarket.com/api/v1/>`_.
 
 You'll need a Storymarket account to use this library, and you'll need to
 generate an API token by visiting the 
@@ -10,17 +10,22 @@ generate an API token by visiting the
 
 .. warning::
 
-    Right now this code is very not done. Feel free to play, but there's a
-    lot that only kinda-sorta works. Think of it as a pencil sketch that
-    I'll be covering over with pen shortly.
+    This library is, at best, of beta quality. It works, but is
+    under-tested and -documented, prone to API changes, and likely has
+    bugs. At this point in time it should be considered a sketch, not
+    a finished work.
 
-Usage
------
+Documentation
+-------------
 
-TODO
+`Read the documentation <http://packages.python.org/django-storymarket/>`_.
+See also `the python-storymarket documentation
+<http://packages.python.org/python-storymarket/>`_
 
 Contributing
 ------------
+
+Run tests with ``python setup.py test``.
 
 Development takes place 
 `on GitHub <http://github.com/jacobian/django-storymarket>`_; please file

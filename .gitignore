@@ -3,3 +3,5 @@
 .coverage
 cover/
 example/example.db
+dist/
+docs/_build/*
