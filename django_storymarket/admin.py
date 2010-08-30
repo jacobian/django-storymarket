@@ -98,7 +98,13 @@ def _save_to_storymarket(obj, storymarket_type, data):
     # TODO: should figure out how to do an update if the object already exists.
     api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
     manager = getattr(api, storymarket_type)
+    blob = data.pop('blob', None)
     sm_obj = manager.create(data)
+
+    # TODO: Is this the right spot to be handling binary data?
+    if blob:
+        sm_obj.upload_blob(blob)
+
     return SyncedObject.objects.mark_synced(obj, sm_obj)
 
 # TODO: figure out how (if at all) to get converted data into form.intial
