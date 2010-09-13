@@ -14,6 +14,7 @@ from django.utils.translation import ugettext as _
 from . import converters
 from .forms import StorymarketSyncForm, StorymarketOptionalSyncForm
 from .models import SyncedObject, AutoSyncedModel, AutoSyncRule
+from .utils import save_to_storymarket
 
 # TODO: reorganize this module into public/private stuff
 
@@ -54,7 +55,7 @@ def upload_to_storymarket(modeladmin, request, queryset):
             info = object_info[obj.pk]
             data = info['converted_data']
             data.update(info['form'].cleaned_data)
-            _save_to_storymarket(obj, info['storymarket_type'], data)
+            save_to_storymarket(obj, info['storymarket_type'], data)
             num_uploaded += 1
             
         modeladmin.message_user(request, 
@@ -87,26 +88,6 @@ def is_synced_to_storymarket(obj):
     """
     return SyncedObject.objects.for_model(obj).exists()
     
-def _save_to_storymarket(obj, storymarket_type, data):
-    """
-    Helper: push an object o Storymarket.
-    
-    Called from the various parts of the admin that need to upload
-    objects -- ``save_model``, the ``upload_to_storymarket`` action,
-    etc.
-    """
-    # TODO: should figure out how to do an update if the object already exists.
-    api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
-    manager = getattr(api, storymarket_type)
-    blob = data.pop('blob', None)
-    sm_obj = manager.create(data)
-
-    # TODO: Is this the right spot to be handling binary data?
-    if blob:
-        sm_obj.upload_blob(blob)
-
-    return SyncedObject.objects.mark_synced(obj, sm_obj)
-
 # TODO: figure out how (if at all) to get converted data into form.intial
 
 class StorymarketUploaderInlineFormset(generic.BaseGenericInlineFormSet):
@@ -124,7 +105,7 @@ class StorymarketUploaderInlineFormset(generic.BaseGenericInlineFormSet):
             sm_data = converters.convert(self.instance)
             sm_type = sm_data.pop('type')
             sm_data.update(form.cleaned_data)
-            so, created = _save_to_storymarket(self.instance, sm_type, sm_data)
+            so, created = save_to_storymarket(self.instance, sm_type, sm_data)
             if created:
                 self.new_objects.append(so)
             else:
