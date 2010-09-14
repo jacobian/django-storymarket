@@ -1,5 +1,6 @@
 import storymarket
 from django.conf import settings
+from django_storymarket.models import SyncedObject
 
 QUEUE_UPLOADS = getattr(settings, 'STORYMARKET_QUEUE_UPLOADS', False)
 if QUEUE_UPLOADS:
