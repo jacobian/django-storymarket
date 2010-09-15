@@ -14,7 +14,7 @@ class StorymarketSyncForm(forms.ModelForm):
     """    
     class Meta:
         model = SyncedObject
-        fields = ['org', 'category', 'tags']
+        fields = ['org', 'category', 'tags', 'pricing', 'rights']
         
     def __init__(self, *args, **kwargs):
         super(StorymarketSyncForm, self).__init__(*args, **kwargs)
@@ -26,7 +26,13 @@ class StorymarketSyncForm(forms.ModelForm):
         self.fields['category'] = forms.TypedChoiceField(label='Category',
                                                          choices=self._choices('subcategories'),
                                                          coerce=int)
-    
+        self.fields['pricing']  = forms.TypedChoiceField(label='Pricing',
+                                                         choices=self._choices('pricing'),
+                                                         coerce=int)
+        self.fields['rights']   = forms.TypedChoiceField(label='Rights',
+                                                         choices=self._choices('rights'),
+                                                         coerce=int)
+
     def _choices(self, manager_name):
         """
         Generate a list of choices from a given storymarket manager type.

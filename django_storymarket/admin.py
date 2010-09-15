@@ -140,7 +140,7 @@ class StorymarketUploaderInline(generic.GenericStackedInline):
     can_delete = False
     form = StorymarketOptionalSyncForm
     formset = StorymarketUploaderInlineFormset
-    fields = ['sync', 'org', 'category', 'tags']
+    fields = ['sync', 'org', 'category', 'tags', 'rights', 'pricing']
     template = 'storymarket/uploader_inline.html'
 
 class AutosyncRuleInline(admin.TabularInline):
