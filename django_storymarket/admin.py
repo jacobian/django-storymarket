@@ -81,7 +81,7 @@ def upload_to_storymarket(modeladmin, request, queryset):
         
     return render_to_response(template_names, context_instance=context)
         
-@attrs(short_description='Synced?', boolean=True)
+@attrs(short_description='On Storymarket?', boolean=True)
 def is_synced_to_storymarket(obj):
     """
     Admin field callback to display storymarket sync status.
@@ -121,7 +121,7 @@ class StorymarketUploaderInline(generic.GenericStackedInline):
     can_delete = False
     form = StorymarketOptionalSyncForm
     formset = StorymarketUploaderInlineFormset
-    fields = ['sync', 'org', 'category', 'tags']
+    fields = ['sync', 'org', 'category', 'tags', 'rights', 'pricing']
     template = 'storymarket/uploader_inline.html'
 
 class AutosyncRuleInline(admin.TabularInline):

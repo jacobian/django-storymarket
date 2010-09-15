@@ -51,7 +51,7 @@ class AutoSyncedModel(models.Model):
     content_type = models.ForeignKey(ContentType, 
                                      related_name='storymarket_autosynced_models',
                                      limit_choices_to=models.Q(
-                                        id__in=[_ct(m).id for m in converters.registered_models()]
+                                        id__in=lambda: [_ct(m).id for m in converters.registered_models()]
                                      ))
     enabled = models.BooleanField(default=False)
     
