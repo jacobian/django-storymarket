@@ -95,6 +95,12 @@ def _save_to_storymarket(obj, storymarket_type, data):
     objects -- ``save_model``, the ``upload_to_storymarket`` action,
     etc.
     """
+    # Fix some field names mapping from local to storymarket names
+    if 'pricing' in data:
+        data['pricing_scheme'] = data.pop('pricing')
+    if 'rights' in data:
+        data['rights_scheme'] = data.pop('rights')
+    
     # TODO: should figure out how to do an update if the object already exists.
     api = storymarket.Storymarket(settings.STORYMARKET_API_KEY)
     manager = getattr(api, storymarket_type)
