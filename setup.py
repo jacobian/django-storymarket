@@ -7,7 +7,7 @@ def read(fname):
     
 setup(
     name = "django-storymarket",
-    version = "1.0a2",
+    version = "1.0a3",
     description = "Sync Django models to Storymarket.",
     long_description = read('README.rst'),
     url = 'http://packages.python.org/django-storymarket',
