@@ -31,6 +31,8 @@ either be the binary data as a string or (more likely) a file-like object::
         }
 """
 
+print "conv"
+
 import storymarket
 from django.db import models
 from django.conf import settings
