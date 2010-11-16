@@ -1,3 +1,4 @@
+import logging
 import operator
 import storymarket
 from django import forms
@@ -7,6 +8,8 @@ from .models import SyncedObject
 
 # Timeout for choices cached from Storymarket. 5 minutes.
 CHOICE_CACHE_TIMEOUT = 600
+
+log = logging.getLogger('django_storymarket')
 
 class StorymarketSyncForm(forms.ModelForm):
     """
@@ -44,7 +47,11 @@ class StorymarketSyncForm(forms.ModelForm):
         choices = cache.get(cache_key)
         if choices is None:
             manager = getattr(self._api, manager_name)
-            objs = sorted(manager.all(), key=operator.attrgetter('name'))
+            try:
+                objs = sorted(manager.all(), key=operator.attrgetter('name'))
+            except storymarket.exceptions.StorymarketError, e:
+                log.exception('Storymarket API call failed: %s' % e)
+                return [(u'', u'--- Storymarket Unavailable ---')]
             
             # If there's only a single object, just select it -- don't offer
             # an empty choice. Otherwise, offer an empty.
