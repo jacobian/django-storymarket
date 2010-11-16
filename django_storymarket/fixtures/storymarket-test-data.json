@@ -1,0 +1,10 @@
+[
+  {
+    "model": "django_storymarket.autosyncedmodel",
+    "pk": 1,
+    "fields": {
+      "content_type": ["auth", "user"],
+      "enabled": true
+    }
+  }
+]

@@ -10,7 +10,7 @@ settings.configure(
     DATABASES = {
         'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory;'}
     },
-    INSTALLED_APPS = ['django_storymarket'],
+    INSTALLED_APPS = ['django_storymarket', 'django.contrib.contenttypes', 'django.contrib.auth'],
     TEST_RUNNER = "django_nose.NoseTestSuiteRunner",
     STORYMARKET_API_KEY = 'APIKEY',
 )
@@ -20,7 +20,7 @@ def runtests():
     # Run you some tests.
     import django.test.utils
     runner_class = django.test.utils.get_runner(settings)
-    test_runner = runner_class(verbosity=0, interactive=True)
+    test_runner = runner_class(verbosity=1, interactive=True)
     failures = test_runner.run_tests(['django_storymarket'])
     
     # Okay, so this is a nasty hack. If this isn't here, `setup.py test` craps out

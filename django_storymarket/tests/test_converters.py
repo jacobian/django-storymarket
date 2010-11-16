@@ -8,11 +8,12 @@ def test_autodiscover():
     converters._discovery_done = False
     with mock.patch.object(converters, 'import_module') as mocked:
 
-        # Under test, INSTALLED_APPS == ['django_storymarket'], so we'd
-        # expect django_storymarket.storymarket_converters to be imported by
-        # autodisocver()
+        # We expect import_module to be called once for each module in INSTALLED_APPS
         converters.autodiscover()
-        mocked.assert_called_with('django_storymarket.storymarket_converters')
+        imported_modules = [call_args[0] for (call_args, call_kwargs) in mocked.call_args_list]
+        for app in settings.INSTALLED_APPS:
+            expected = '%s.%s' % (app, 'storymarket_converters')
+            assert expected in imported_modules, "%r not found in %r" % (expected, imported_modules)
         assert converters._discovery_done
         
         # A second autodiscover will *not* reimport the module.

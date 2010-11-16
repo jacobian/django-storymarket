@@ -1,8 +1,10 @@
 import mock
 import datetime
 from contextlib import nested
+from django.test import TestCase
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django_storymarket.models import SyncedObject
+from django_storymarket.models import SyncedObject, AutoSyncedModel
     
 def test_mark_synced():
     mock_sm_obj = mock.Mock()
@@ -26,3 +28,19 @@ def test_mark_synced():
         SyncedObject.objects.mark_synced(mock_django_obj, mock_sm_obj)
         assert mock_synced_obj.save.called
     
+class AutoSyncedModelTests(TestCase):
+    fixtures = ['storymarket-test-data.json']
+        
+    def test_should_sync_no_rules(self):
+        asm = AutoSyncedModel(content_type=ContentType.objects.get_for_model(User), enabled=True)
+        
+        # Enabled + matching content type: yes
+        self.assertEqual(asm.should_sync(User()), True)
+        
+        # Wrong content type: no
+        self.assertEqual(asm.should_sync(asm), False)
+        
+        # Not enabled: no
+        asm.enabled = False
+        self.assertEqual(asm.should_sync(User()), False)
+        
