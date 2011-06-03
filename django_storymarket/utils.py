@@ -31,7 +31,7 @@ def save_to_storymarket(obj, storymarket_type, data):
         for subitem in package_items:
             subobj = subitem.pop('object')
             subtype = subitem.pop('type').rstrip('s')
-            synced = save_to_storymarket(subobj, subtype, subitem)
+            synced, created = save_to_storymarket(subobj, subtype, subitem)
             data.setdefault('%s_items' % subtype, []).append(synced.storymarket_id)
     
     # Grab the appropriate manager for the given storymarket type.
